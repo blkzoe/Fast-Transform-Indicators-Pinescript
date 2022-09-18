@@ -1,0 +1,181 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ZoeUdokpan
+
+//@version=5
+indicator("fastsinetransform")
+
+//define a constant
+float pi = math.pi
+
+fastsinetransform(float price = close,int tnn = 2,bool inversefst = false) =>
+
+//--------------------------------declare variables
+    int jj = 0
+    int j = 0
+    int tm = 0
+    int n2 = 0
+    int i = 0
+    int i1 = 0
+    int i2 = 0
+    int i3 = 0
+    int i4 = 0
+    int nn = 0
+    int ii = 0
+    int n = 0
+    int mmax = 0
+    int m = 0
+    int period = 0
+    int istep = 0
+    int isign = 0
+    float tempr = 0.0
+    float tempi = 0.0
+    float sum = 0.0
+    float y1 = 0.0
+    float y2 = 0.0
+    float theta = 0.0
+    float wi = 0.0
+    float wr = 0.0
+    float wpi = 0.0
+    float wpr = 0.0
+    float wtemp = 0.0
+    float twr = 0.0
+    float twi = 0.0
+    float twpr = 0.0
+    float twpi = 0.0
+    float twtemp = 0.0
+    float ttheta = 0.0
+    float c1 = 0.0
+    float c2 = 0.0
+    float h1r = 0.0
+    float h1i = 0.0
+    float h2r = 0.0
+    float h2i = 0.0
+    float wrs = 0.0
+    float wis = 0.0
+    var a = array.new_float(50)
+      
+//---------------------------------------populate the array----------------------------
+    for period=0 to 49 by 1
+        array.set(a,period,price)
+//----------------------------------------check for a minimum value--------------------
+    if tnn==1
+        array.set(a,0,0)
+//-------------------------------------------------------------------------------------
+    theta:=pi/tnn
+    wr := 1.0
+    wi := 0.0
+    wpr := -2.0*math.pow(math.sin(0.5*theta),2)
+    wpi := math.sin(theta)
+    array.set(a,0,0)
+    tm := tnn/2
+    n2 := tnn+2
+//-------------------------------------------------------------------------------------
+    for j=2 to tm+1 by 1
+        wtemp:=wr
+        wr := wr*wpr-wi*wpi+wr
+        wi := wi*wpr+wtemp*wpi+wi
+        y1 := wi*(array.get(a,j-1)+array.get(a,n2-j-1))
+        y2 := 0.5*(array.get(a,j-1)+array.get(a,n2-j-1))
+        array.set(a,j-1,y1+y2)
+        array.set(a,n2-j-1,y1-y2)
+//-------------------------------------------------------------------------------------
+    ttheta:=2.0*pi/tnn
+    c1 := 0.5
+    c2 := -0.5
+    isign:=1
+    n:=tnn
+    nn:= tnn/2
+    j := 1
+//-------------------------------------------------------------------------------------
+    for ii=1 to nn by 1
+        i:=2*ii-1
+        if j>i
+            tempr := array.get(a,j-1)
+            tempi := array.get(a,j)
+            array.set(a,j-1,array.get(a,i-1))
+            array.set(a,j,array.get(a,i))
+            array.set(a,i-1,tempr)
+            array.set(a,i,tempi)
+        m:=n/2
+//-------------------------------------------------------------------------------------
+    while m>=2 and j>m
+        j := j-m
+        m := m/2
+    j:=j+m
+    mmax:=2
+//-------------------------------------------------------------------------------------
+    while n>mmax
+        istep := 2*mmax
+        theta := 2.0*pi/(isign*mmax)
+        wpr := -2.0*math.pow(math.sin(0.5*theta),2)
+        wpi := math.sin(theta)
+        wr := 1.0
+        wi := 0.0
+        for ii=1 to mmax/2 by 1
+            m:=2*ii-1
+            for jj=0 to (n-m)/istep by 1 
+                i := m+jj*istep
+                j := i+mmax
+                tempr := wr*array.get(a,j-1)-wi*array.get(a,j)
+                tempi = wr*array.get(a,j)-wi*array.get(a,j-1)
+                array.set(a,j-1,array.get(a,i-1)-tempr)
+                array.set(a,j,array.get(a,i)-tempi)
+                array.set(a,i-1,array.get(a,i-1)+tempr)
+                array.set(a,i,array.get(a,i)+tempr)
+            wtemp:=wr
+            wr := wr*wpr-wi*wpi+wr
+            wi := wi*wpr+wtemp*wpi+wi
+    
+    mmax:=istep
+//-------------------------------------------------------------------------------------
+    twpr := -2.0*math.pow(math.sin(0.5*ttheta),2)
+    twpi := math.sin(ttheta)
+    twr := 1.0+twpr
+    twi := twpi
+    for i=2 to tnn/4+1 by 1
+        i1 := i+i-2
+        i2 := i1+1
+        i3 := tnn+1-i2
+        i4 := i3+1
+        wrs := twr
+        wis := twi
+        h1r := c1*(array.get(a,i1)+array.get(a,i3))
+        h1i := c1*(array.get(a,i2)+array.get(a,i4))
+        h2r := -c2*(array.get(a,i2)+array.get(a,i4))
+        h2i := c2*(array.get(a,i1)+array.get(a,i3))
+        array.set(a,i1,h1r+wrs*h2r-wis*h2i)
+        array.set(a,i2,h1i+wrs*h2i+wis*h2r)
+        array.set(a,i3,h1r-wrs*h2r+wis*h2i)
+        array.set(a,i4,-h1i+wrs*h2i+wis*h2r)
+        twtemp:= twr
+        twr := twr*twpr-twi*twpi+twr
+        twi := twi*twpr+twtemp*twpi+twi
+//-------------------------------------------------------------------------------------
+    h1r:=array.get(a,0)
+    array.set(a,0,h1r+array.get(a,1))
+    array.set(a,1,h1r-array.get(a,1))
+    sum:=0.0
+    array.set(a,1,0.5-array.get(a,0))
+    array.set(a,0,0.0)
+//-------------------------------------------------------------------------------------
+    for jj=0 to tm-1 by 1
+        j:=2*jj+2
+        sum+=array.get(a,j-1)
+        array.set(a,j-1,array.get(a,j))
+        array.set(a,j,sum)
+//-------------------------------------------------------------------------------------
+    if inversefst == true 
+        for j=2 to tnn by 1
+            array.set(a,j-1,array.get(a,j-1)*2/tnn)
+            sum := array.get(a,j)
+    
+//------------------------------------return output--------------------------------------
+    sum // Adding some stuff because sum looked lonely :)
+ 
+
+fst = fastsinetransform(close,2,false)
+
+//------------------------------------display and interaction--------------------------------------
+
+plot(fst, 'fst signal', color=color.new(color.aqua, 50), linewidth=3, style=plot.style_line)
+
